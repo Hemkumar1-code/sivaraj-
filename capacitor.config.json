@@ -1,0 +1,8 @@
+{
+  "appId": "id.tracking.app",
+  "appName": "TrackingApp",
+  "webDir": "public",
+  "server": {
+    "cleartext": true
+  }
+}

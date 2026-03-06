@@ -22,8 +22,58 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+// Helper to generate a map HTML file with Leaflet
+function generateMapHTML(history, userId) {
+    if (!history || history.length === 0) return '<h1>No location history</h1>';
+
+    const latlngs = history.map(p => `[${p.lat}, ${p.lng}]`).join(',\n            ');
+    const startPoint = history[0];
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+    <title>Route Map for ${userId}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        var map = L.map('map').setView([${startPoint.lat}, ${startPoint.lng}], 15);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        var latlngs = [
+            ${latlngs}
+        ];
+
+        var polyline = L.polyline(latlngs, {color: 'black', weight: 6, opacity: 0.8}).addTo(map);
+        map.fitBounds(polyline.getBounds());
+
+        var endPoint = latlngs[latlngs.length - 1];
+        if (endPoint) {
+            var bikeIcon = L.icon({
+                iconUrl: 'https://cdn-icons-png.flaticon.com/512/1986/1986937.png', // Bike image
+                iconSize: [40, 40],
+                iconAnchor: [20, 20]
+            });
+            L.marker(endPoint, {icon: bikeIcon}).bindPopup('Ride Finished Here!').addTo(map);
+        }
+    </script>
+</body>
+</html>`;
+}
+
 // Helper to send email
-async function notifyAdminDistance(userId, distanceKm) {
+async function notifyAdminDistance(userId, distanceKm, history) {
     if (!EMAIL_USER || EMAIL_USER.includes('YOUR_GMAIL')) return; // Skip if config is not set
 
     const mailOptions = {
@@ -35,8 +85,18 @@ async function notifyAdminDistance(userId, distanceKm) {
             <p><strong>User:</strong> ${userId}</p>
             <p><strong>Total Distance Traveled:</strong> ${distanceKm.toFixed(3)} km</p>
             <p>Time of completion: ${new Date().toLocaleString()}</p>
-        `
+            <p><em>Please download and open the attached 'route_map_${userId}.html' file to view the dark line route.</em></p>
+        `,
+        attachments: []
     };
+
+    if (history && history.length > 0) {
+        mailOptions.attachments.push({
+            filename: `route_map_${userId}.html`,
+            content: generateMapHTML(history, userId),
+            contentType: 'text/html'
+        });
+    }
 
     try {
         await transporter.sendMail(mailOptions);
@@ -116,7 +176,7 @@ io.on('connection', (socket) => {
             const userData = activeUsers.get(userId);
             if (userData) {
                 console.log(`Sending summary email for ${userId} with distance ${userData.distance} km`);
-                notifyAdminDistance(userId, userData.distance);
+                notifyAdminDistance(userId, userData.distance, userData.history);
                 // We wipe out their distance history so next time it starts from 0 (optional)
                 activeUsers.delete(userId);
             }

@@ -12,7 +12,7 @@
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://0dc8ac37452d44.lhr.life/socket.io/socket.io.js"></script>
 </head>
 
 <body>
@@ -52,13 +52,13 @@
             maxZoom: 19
         }).addTo(map);
 
-        const carIcon = L.icon({
-            iconUrl: 'https://cdn-icons-png.flaticon.com/512/3204/3204098.png',
-            iconSize: [32, 32],
-            iconAnchor: [16, 16]
+        const bikeIcon = L.icon({
+            iconUrl: 'https://cdn-icons-png.flaticon.com/512/1986/1986937.png',
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
         });
 
-        const socket = io();
+        const socket = io("https://0dc8ac37452d44.lhr.life");
         socket.emit('admin_join');
 
         const activeMarkers = {}; // Keep robust ref to map markers
@@ -95,7 +95,7 @@
         function updateMarker(data) {
             if (!activeMarkers[data.userId]) {
                 // New user on map
-                activeMarkers[data.userId] = L.marker([data.lat, data.lng], { icon: carIcon }).addTo(map)
+                activeMarkers[data.userId] = L.marker([data.lat, data.lng], { icon: bikeIcon }).addTo(map)
                     .bindPopup(`<b>User:</b> ${data.userId}<br><b>Distance:</b> ${data.distance ? data.distance.toFixed(2) : 0} km`);
                 map.setView([data.lat, data.lng], 15);
             } else {
