@@ -20,7 +20,7 @@ const carIcon = L.icon({
 });
 
 // Since the dev server is likely running on a different port than the node API
-const socket = io('http://localhost:3000');
+const socket = io('https://huge-stars-divide.loca.lt');
 
 const Admin = () => {
     const navigate = useNavigate();

@@ -13,8 +13,8 @@ const Track = () => {
         // Only connect if we are intending to track
         if (!isTracking) return;
 
-        // Connect to the backend
-        const s = io('http://localhost:3000');
+        // Connect to the backend via localtunnel URL
+        const s = io('https://huge-stars-divide.loca.lt');
         setSocket(s);
 
         let watchId = null;
