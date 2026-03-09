@@ -20,7 +20,7 @@ const carIcon = L.icon({
     iconSize: [32, 32],
     iconAnchor: [16, 16]
 });
-const socket = io('https://15a0ec2481f6ba.lhr.life');
+const socket = io('https://d5a3391e6eb1d1.lhr.life');
 
 const Admin = () => {
     const navigate = useNavigate();
@@ -96,7 +96,7 @@ const Admin = () => {
     const handleCreateUser = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch('https://15a0ec2481f6ba.lhr.life/api/users', {
+            const res = await fetch('https://d5a3391e6eb1d1.lhr.life/api/users', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: newEmail, password: newPassword, role: newRole })

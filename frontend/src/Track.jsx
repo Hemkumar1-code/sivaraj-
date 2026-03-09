@@ -16,7 +16,7 @@ const Track = () => {
         if (!isTracking) return;
 
         // Connect to the backend via localtunnel URL
-        const s = io('https://15a0ec2481f6ba.lhr.life');
+        const s = io('https://d5a3391e6eb1d1.lhr.life');
         setSocket(s);
 
         let watchId = null;

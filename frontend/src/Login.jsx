@@ -14,8 +14,7 @@ const Login = () => {
       // Dev server runs on 5173, backend on 3000. So we need to put the full URL or proxy.
       // Easiest is to use the full URL of the node server for this demo, assume localhost:3000
       // since backend is running there, but we need to ensure it's accessible.
-      // I'll add the fetch request to the node server base url.
-      const res = await fetch('https://15a0ec2481f6ba.lhr.life/api/login', {
+      const res = await fetch('https://d5a3391e6eb1d1.lhr.life/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
