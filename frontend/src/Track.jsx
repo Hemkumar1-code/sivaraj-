@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
+import { db } from './firebase';
+import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 
 const Track = () => {
     const [searchParams] = useSearchParams();
@@ -21,15 +23,30 @@ const Track = () => {
 
         if (navigator.geolocation) {
             watchId = navigator.geolocation.watchPosition(
-                (position) => {
+                async (position) => {
                     const { latitude, longitude } = position.coords;
+                    const timestamp = new Date().toISOString();
 
                     s.emit('update_location', {
                         userId: userId,
                         lat: latitude,
                         lng: longitude,
-                        timestamp: new Date().toISOString()
+                        timestamp: timestamp
                     });
+
+                    // Push Live Location to Firestore
+                    if (userId !== 'unknown') {
+                        try {
+                            await setDoc(doc(db, "active_users", userId), {
+                                userId: userId,
+                                lat: latitude,
+                                lng: longitude,
+                                timestamp: timestamp
+                            }, { merge: true });
+                        } catch (error) {
+                            console.error("Firebase update error", error);
+                        }
+                    }
 
                     setLogs(`Lat: ${latitude.toFixed(5)} \nLng: ${longitude.toFixed(5)} \nUpdated: ${new Date().toLocaleTimeString()}`);
                 },
@@ -51,10 +68,13 @@ const Track = () => {
         };
     }, [userId, isTracking]);
 
-    const stopTracking = () => {
+    const stopTracking = async () => {
         setIsTracking(false);
         if (socket) {
             socket.disconnect();
+        }
+        if (userId !== 'unknown') {
+            try { await deleteDoc(doc(db, "active_users", userId)); } catch (e) { console.error(e); }
         }
         setLogs("Location sharing has been stopped.");
     };

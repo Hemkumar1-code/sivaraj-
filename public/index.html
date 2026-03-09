@@ -1,49 +1,14 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trackr - Login</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-
-<div class="glass-panel login-container">
-    <h1>Trackr</h1>
-    <p>Sign in to your account</p>
-    <form id="loginForm">
-        <div class="input-group">
-            <label for="email">Email Address</label>
-            <input type="email" id="email" required placeholder="name@example.com">
-        </div>
-        <div class="input-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" required placeholder="••••••••">
-        </div>
-        <button type="submit" class="btn">Sign In</button>
-    </form>
-    <div id="errorMsg" style="color: var(--danger); margin-top: 1rem; display: none;">Invalid credentials</div>
-</div>
-
-<script>
-document.getElementById('loginForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    const errorMsg = document.getElementById('errorMsg');
-
-    if (email === 'hemk3672@gmail.com' && password === 'HEMkumar33#') {
-        localStorage.setItem('role', 'admin');
-        window.location.href = '/admin.html';
-    } else if (email === 'sivaraj@gmail.com' && password === 'Sivaraj33#') {
-        localStorage.setItem('role', 'user');
-        localStorage.setItem('userId', 'sivaraj_1'); // unique ID for sivaraj
-        window.location.href = '/user.html';
-    } else {
-        errorMsg.style.display = 'block';
-    }
-});
-</script>
-
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>frontend</title>
+    <script type="module" crossorigin src="/assets/index-D-i2ssxW.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-DzoKXsW5.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
 </html>

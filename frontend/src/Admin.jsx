@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { io } from 'socket.io-client';
+import { db } from './firebase';
+import { collection, onSnapshot, query } from 'firebase/firestore';
 import 'leaflet/dist/leaflet.css';
 
 // Fix typical Leaflet icon issue in React
@@ -25,7 +27,13 @@ const socket = io('https://huge-stars-divide.loca.lt');
 const Admin = () => {
     const navigate = useNavigate();
     const [users, setUsers] = useState([]);
+    const [showCreate, setShowCreate] = useState(false);
+    const [newEmail, setNewEmail] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [newRole, setNewRole] = useState('user');
+    const [createMsg, setCreateMsg] = useState('');
     const mapRef = useRef(null);
+
 
     useEffect(() => {
         if (localStorage.getItem('role') !== 'admin') {
@@ -36,14 +44,39 @@ const Admin = () => {
         socket.emit('admin_join');
 
         socket.on('initial_locations', (usersArray) => {
-            setUsers(usersArray);
+            setUsers(prev => {
+                let merged = [...prev];
+                usersArray.forEach(u => {
+                    if (!merged.find(m => m.userId === u.userId)) merged.push(u);
+                });
+                return merged;
+            });
+        });
+
+        const q = query(collection(db, "active_users"));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const fbUsers = [];
+            snapshot.forEach(doc => fbUsers.push(doc.data()));
+            setUsers(prev => {
+                let merged = [...prev];
+                fbUsers.forEach(fu => {
+                    const idx = merged.findIndex(u => u.userId === fu.userId);
+                    if (idx !== -1) merged[idx] = { ...merged[idx], ...fu };
+                    else merged.push(fu);
+                });
+                // Clean up offline users deleted from FB
+                merged = merged.filter(m => fbUsers.find(fu => fu.userId === m.userId) || m.distance);
+                return merged;
+            });
         });
 
         socket.on('user_location_update', (userData) => {
             setUsers(prev => {
-                const existingInfo = prev.find(u => u.userId === userData.userId);
-                if (existingInfo) {
-                    return prev.map(u => u.userId === userData.userId ? userData : u);
+                const existingIdx = prev.findIndex(u => u.userId === userData.userId);
+                if (existingIdx !== -1) {
+                    const updated = [...prev];
+                    updated[existingIdx] = { ...updated[existingIdx], distance: userData.distance };
+                    return updated;
                 }
                 return [...prev, userData];
             });
@@ -52,12 +85,33 @@ const Admin = () => {
         return () => {
             socket.off('initial_locations');
             socket.off('user_location_update');
+            unsubscribe();
         };
     }, [navigate]);
 
     const focusUser = (lat, lng) => {
         if (mapRef.current) {
             mapRef.current.flyTo([lat, lng], 17);
+        }
+    };
+
+    const handleCreateUser = async (e) => {
+        e.preventDefault();
+        try {
+            const res = await fetch('http://localhost:3000/api/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: newEmail, password: newPassword, role: newRole })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setCreateMsg('User created successfully!');
+                setNewEmail(''); setNewPassword(''); setNewRole('user');
+            } else {
+                setCreateMsg(data.error || 'Failed to create user');
+            }
+        } catch (err) {
+            setCreateMsg('Server error');
         }
     };
 
@@ -112,7 +166,52 @@ const Admin = () => {
                     </div>
                 </div>
 
-                <div className="map-container">
+                {/* Create User/Admin Panel */}
+                <div style={{
+                    width: '300px',
+                    background: 'rgba(30, 41, 59, 0.5)',
+                    borderRadius: '12px',
+                    padding: '1rem',
+                    border: '1px solid var(--border)',
+                    overflowY: 'auto'
+                }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        <h2 style={{ fontSize: '1.2rem', color: 'var(--text-main)', margin: 0 }}>Manage Users</h2>
+                        <button className="btn" style={{ padding: '0.4rem', fontSize: '0.8rem' }} onClick={() => setShowCreate(!showCreate)}>
+                            {showCreate ? 'Close' : 'Create User'}
+                        </button>
+                    </div>
+
+                    {showCreate && (
+                        <form onSubmit={handleCreateUser} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <input
+                                type="email"
+                                placeholder="Email"
+                                value={newEmail} onChange={e => setNewEmail(e.target.value)}
+                                required
+                                style={{ padding: '0.5rem', borderRadius: '4px', border: 'none', background: '#334155', color: '#fff' }}
+                            />
+                            <input
+                                type="password"
+                                placeholder="Password"
+                                value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                                required
+                                style={{ padding: '0.5rem', borderRadius: '4px', border: 'none', background: '#334155', color: '#fff' }}
+                            />
+                            <select
+                                value={newRole} onChange={e => setNewRole(e.target.value)}
+                                style={{ padding: '0.5rem', borderRadius: '4px', border: 'none', background: '#334155', color: '#fff' }}
+                            >
+                                <option value="user">User</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                            <button className="btn" type="submit" style={{ padding: '0.5rem' }}>Create</button>
+                            {createMsg && <p style={{ fontSize: '0.8rem', color: createMsg.includes('error') || createMsg.includes('Failed') ? 'var(--danger)' : '#10b981', marginTop: '5px' }}>{createMsg}</p>}
+                        </form>
+                    )}
+                </div>
+
+                <div className="map-container" style={{ flex: 1 }}>
                     <MapContainer
                         center={[13.0827, 80.2707]} // Default to Chennai
                         zoom={12}

@@ -7,19 +7,35 @@ const Login = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (email === 'hemk3672@gmail.com' && password === 'HEMkumar33#') {
-      localStorage.setItem('role', 'admin');
-      navigate('/admin');
-    } else if (email === 'sivaraj@gmail.com' && password === 'Sivaraj33#') {
-      localStorage.setItem('role', 'user');
-      localStorage.setItem('userId', 'sivaraj_1'); // unique ID for sivaraj
-      navigate('/user');
-    } else {
-      setError('Invalid credentials');
+    try {
+      // Need to adjust URL path considering Vite dev server proxies or static serve,
+      // Dev server runs on 5173, backend on 3000. So we need to put the full URL or proxy.
+      // Easiest is to use the full URL of the node server for this demo, assume localhost:3000
+      // since backend is running there, but we need to ensure it's accessible.
+      // I'll add the fetch request to the node server base url.
+      const res = await fetch('http://localhost:3000/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        localStorage.setItem('role', data.role);
+        localStorage.setItem('userId', data.email.split('@')[0]); // Use email prefix as ID or better the DB id
+        if (data.role === 'admin') navigate('/admin');
+        else navigate('/user');
+      } else {
+        setError(data.error || 'Invalid credentials');
+      }
+    } catch (err) {
+      setError('Failed to connect to server');
     }
   };
+
 
   return (
     <div className="glass-panel login-container">

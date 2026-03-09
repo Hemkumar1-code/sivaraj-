@@ -3,6 +3,9 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const nodemailer = require('nodemailer');
+const cors = require('cors');
+const db = require('./db');
+
 
 const app = express();
 const server = http.createServer(app);
@@ -119,8 +122,27 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
     return R * c;
 }
 
+app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
+
+// API Endpoints
+app.post('/api/login', (req, res) => {
+    const { email, password } = req.body;
+    db.get('SELECT * FROM users WHERE username = ? AND password = ?', [email, password], (err, row) => {
+        if (err) return res.status(500).json({ error: 'Database error' });
+        if (!row) return res.status(401).json({ error: 'Invalid credentials' });
+        res.json({ id: row.id, role: row.role, email: row.username });
+    });
+});
+
+app.post('/api/users', (req, res) => {
+    const { email, password, role } = req.body;
+    db.run('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', [email, password, role], function (err) {
+        if (err) return res.status(500).json({ error: 'Failed to create user (might already exist)' });
+        res.json({ id: this.lastID, email, role });
+    });
+});
 
 // Users connecting via socket
 io.on('connection', (socket) => {
@@ -163,8 +185,12 @@ io.on('connection', (socket) => {
 
         activeUsers.set(userId, userData);
 
+        // Store location history into SQLite Database
+        db.run('INSERT INTO location_history (user_id, lat, lng, timestamp) VALUES (?, ?, ?, ?)', [userId, lat, lng, timestamp]);
+
         // Broadcast to admins
         io.to('admins').emit('user_location_update', userData);
+
     });
 
     socket.on('disconnect', () => {
