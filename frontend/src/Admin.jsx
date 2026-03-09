@@ -20,9 +20,7 @@ const carIcon = L.icon({
     iconSize: [32, 32],
     iconAnchor: [16, 16]
 });
-
-// Since the dev server is likely running on a different port than the node API
-const socket = io('https://huge-stars-divide.loca.lt');
+const socket = io('https://15a0ec2481f6ba.lhr.life');
 
 const Admin = () => {
     const navigate = useNavigate();
@@ -98,7 +96,7 @@ const Admin = () => {
     const handleCreateUser = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch('http://localhost:3000/api/users', {
+            const res = await fetch('https://15a0ec2481f6ba.lhr.life/api/users', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: newEmail, password: newPassword, role: newRole })
