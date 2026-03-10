@@ -23,11 +23,9 @@ const User = () => {
                 setScanResult("QR Code Scanned Successfully!");
                 scanner.clear();
                 const userId = localStorage.getItem('userId') || 'sivaraj_1';
-                // Proceed to tracking mapped to this user upon successful scan
                 navigate(`/track`);
             },
             (error) => {
-                // Ignore scan failures as they happen continuously
             }
         );
 

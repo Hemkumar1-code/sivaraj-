@@ -13,9 +13,9 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
 const activeUsers = new Map();
-const socketToUser = new Map(); // to track which socket corresponds to which user
-const EMAIL_USER = 'hemk3672@Gmail.com'; // Admin Gmail
-const EMAIL_PASS = 'xppewlvidigowitv';    // App Password
+const socketToUser = new Map();
+const EMAIL_USER = 'hemk3672@Gmail.com';
+const EMAIL_PASS = 'xppewlvidigowitv';
 
 // Setup Nodemailer Transporter
 const transporter = nodemailer.createTransport({
@@ -215,6 +215,11 @@ io.on('connection', (socket) => {
             console.log(`Cleaned up user ${userId}`);
         }
     });
+});
+
+// Catch-all route for Single Page Application (React Router)
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 const PORT = process.env.PORT || 3000;

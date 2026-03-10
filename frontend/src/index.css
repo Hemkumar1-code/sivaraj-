@@ -36,8 +36,6 @@ body {
   align-items: center;
   flex-direction: column;
 }
-
-/* Base Glassmatic UI */
 .glass-panel {
   background: var(--bg-card);
   backdrop-filter: blur(12px);
