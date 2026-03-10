@@ -218,7 +218,7 @@ io.on('connection', (socket) => {
 });
 
 // Catch-all route for Single Page Application (React Router)
-app.get('*', (req, res) => {
+app.get(/.*/, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
