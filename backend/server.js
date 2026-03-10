@@ -4,7 +4,8 @@ const { Server } = require('socket.io');
 const path = require('path');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
-const db = require('./db');
+const { connectDB, User, LocationHistory } = require('./db');
+require('dotenv').config();
 
 
 const app = express();
@@ -127,21 +128,25 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
 // API Endpoints
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
-    db.get('SELECT * FROM users WHERE username = ? AND password = ?', [email, password], (err, row) => {
-        if (err) return res.status(500).json({ error: 'Database error' });
-        if (!row) return res.status(401).json({ error: 'Invalid credentials' });
-        res.json({ id: row.id, role: row.role, email: row.username });
-    });
+    try {
+        const user = await User.findOne({ username: email, password: password });
+        if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+        res.json({ id: user._id, role: user.role, email: user.username });
+    } catch (error) {
+        res.status(500).json({ error: 'Database error' });
+    }
 });
 
-app.post('/api/users', (req, res) => {
+app.post('/api/users', async (req, res) => {
     const { email, password, role } = req.body;
-    db.run('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', [email, password, role], function (err) {
-        if (err) return res.status(500).json({ error: 'Failed to create user (might already exist)' });
-        res.json({ id: this.lastID, email, role });
-    });
+    try {
+        const newUser = await User.create({ username: email, password, role });
+        res.json({ id: newUser._id, email: newUser.username, role: newUser.role });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to create user (might already exist)' });
+    }
 });
 
 // Users connecting via socket
@@ -185,8 +190,8 @@ io.on('connection', (socket) => {
 
         activeUsers.set(userId, userData);
 
-        // Store location history into SQLite Database
-        db.run('INSERT INTO location_history (user_id, lat, lng, timestamp) VALUES (?, ?, ?, ?)', [userId, lat, lng, timestamp]);
+        // Store location history into MongoDB Database
+        LocationHistory.create({ user_id: userId, lat, lng, timestamp }).catch(err => console.error("Error saving location:", err));
 
         // Broadcast to admins
         io.to('admins').emit('user_location_update', userData);
@@ -213,6 +218,8 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Server listening on port ${PORT}`);
+connectDB().then(() => {
+    server.listen(PORT, () => {
+        console.log(`Server listening on port ${PORT}`);
+    });
 });

@@ -1,43 +1,45 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+const mongoose = require('mongoose');
 
-const dbPath = path.join(__dirname, 'database.sqlite');
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        console.error('Error opening database', err.message);
-    } else {
-        console.log('Connected to the SQLite database.');
+const connectDB = async () => {
+    try {
+        // You will need to put your MongoDB Atlas Connection String here or in a .env file!
+        // Example: mongodb+srv://username:password@cluster.mongodb.net/trackr
+        const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/trackr';
+        await mongoose.connect(uri);
+        console.log('Connected to MongoDB database.');
 
-        // Create Users table
-        db.run(`CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE,
-            password TEXT,
-            role TEXT
-        )`, (err) => {
-            if (err) console.error('Error creating users table', err);
-            else {
-                // Initialize default users if empty
-                db.get("SELECT COUNT(*) as count FROM users", (err, row) => {
-                    if (row && row.count === 0) {
-                        db.run("INSERT INTO users (username, password, role) VALUES ('hemk3672@gmail.com', 'HEMkumar33#', 'admin')");
-                        db.run("INSERT INTO users (username, password, role) VALUES ('sivaraj@gmail.com', 'Sivaraj33#', 'user')");
-                    }
-                });
-            }
-        });
+        // Initialize default users if db is empty
+        const count = await User.countDocuments();
+        if (count === 0) {
+            await User.create([
+                { username: 'hemk3672@gmail.com', password: 'HEMkumar33#', role: 'admin' },
+                { username: 'sivaraj@gmail.com', password: 'Sivaraj33#', role: 'user' }
+            ]);
+            console.log('Default users created in MongoDB.');
+        }
 
-        // Create Location History table
-        db.run(`CREATE TABLE IF NOT EXISTS location_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT,
-            lat REAL,
-            lng REAL,
-            timestamp TEXT
-        )`, (err) => {
-            if (err) console.error('Error creating location_history table', err);
-        });
+    } catch (err) {
+        console.error('Error connecting to MongoDB', err);
+        process.exit(1);
     }
+};
+
+// Define Models
+const userSchema = new mongoose.Schema({
+    username: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    role: { type: String, required: true }
 });
 
-module.exports = db;
+const User = mongoose.model('User', userSchema);
+
+const locationHistorySchema = new mongoose.Schema({
+    user_id: String,
+    lat: Number,
+    lng: Number,
+    timestamp: String
+});
+
+const LocationHistory = mongoose.model('LocationHistory', locationHistorySchema);
+
+module.exports = { connectDB, User, LocationHistory };
