@@ -12,11 +12,8 @@ const Track = () => {
     const [socket, setSocket] = useState(null);
 
     useEffect(() => {
-        // Only connect if we are intending to track
         if (!isTracking) return;
-
-        // Connect to the backend via localtunnel URL
-        const s = io('https://d5a3391e6eb1d1.lhr.life');
+        const s = io('https://location-2-okrw.onrender.com');
         setSocket(s);
 
         let watchId = null;
@@ -33,8 +30,6 @@ const Track = () => {
                         lng: longitude,
                         timestamp: timestamp
                     });
-
-                    // Push Live Location to Firestore
                     if (userId !== 'unknown') {
                         try {
                             await setDoc(doc(db, "active_users", userId), {
