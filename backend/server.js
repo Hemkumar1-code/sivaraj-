@@ -217,9 +217,9 @@ io.on('connection', (socket) => {
     });
 });
 
-// Catch-all route for Single Page Application (React Router)
-app.get(/.*/, (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Root health check route
+app.get('/', (req, res) => {
+    res.send('Trackr Backend is Running Perfectly! 🚀');
 });
 
 const PORT = process.env.PORT || 3000;
