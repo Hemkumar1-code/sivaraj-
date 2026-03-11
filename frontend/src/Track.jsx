@@ -13,8 +13,6 @@ const Track = () => {
     const [logs, setLogs] = useState('Waiting for GPS fix...');
     const [isTracking, setIsTracking] = useState(true);
     const [socket, setSocket] = useState(null);
-
-    // Prevent screen from turning off while tracking
     useEffect(() => {
         let wakeLock = null;
         const requestWakeLock = async () => {
@@ -79,8 +77,8 @@ const Track = () => {
                 backgroundMessage: "Your live location is being shared safely.",
                 backgroundTitle: "Live Tracking Active",
                 requestPermissions: true,
-                stale: false,
-                distanceFilter: 5 // Get update every 5 meters
+                stale: true,
+                distanceFilter: 0 // Get updates constantly to ensure a quick fix
             }, (location, error) => {
                 if (error) {
                     console.error("Background Geo Error:", error);
