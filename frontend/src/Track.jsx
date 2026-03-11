@@ -72,29 +72,37 @@ const Track = () => {
         };
 
         if (Capacitor.isNativePlatform()) {
-            // Using Background Geolocation for Mobile App
-            BackgroundGeolocation.addWatcher({
-                backgroundMessage: "Your live location is being shared safely.",
-                backgroundTitle: "Live Tracking Active",
-                requestPermissions: true,
-                stale: true,
-                distanceFilter: 0 // Get updates constantly to ensure a quick fix
-            }, (location, error) => {
-                if (error) {
-                    console.error("Background Geo Error:", error);
-                    if (error.code === "NOT_AUTHORIZED") {
-                        setLogs("Background Location Permission Denied.");
-                    }
-                    return;
-                }
-                if (location && location.latitude) {
-                    handleLocationUpdate(location.latitude, location.longitude);
-                }
-            }).then((id) => {
-                bgWatcherId = id;
-            }).catch(err => {
-                console.error("Error starting background watcher", err);
-                setLogs("Failed to initialize background tracking.");
+            import('@capacitor/geolocation').then(({ Geolocation }) => {
+                const initBackgroundWatcher = () => {
+                    BackgroundGeolocation.addWatcher({
+                        backgroundMessage: "Your live location is being shared safely.",
+                        backgroundTitle: "Live Tracking Active",
+                        requestPermissions: true,
+                        stale: true,
+                        distanceFilter: 0
+                    }, (location, error) => {
+                        if (error) {
+                            console.error("Background Geo Error:", error);
+                            if (error.code === "NOT_AUTHORIZED") {
+                                setLogs("Background Location Denied.\n\nPlease go to:\nSettings -> Apps -> Your App -> Permissions -> Location\nSelect 'Allow all the time'.");
+                            } else {
+                                setLogs(`Background Geo Error: ${error.message || error.code}`);
+                            }
+                            return;
+                        }
+                        if (location && location.latitude) {
+                            handleLocationUpdate(location.latitude, location.longitude);
+                        }
+                    }).then((id) => {
+                        bgWatcherId = id;
+                        setLogs("Background tracking started successfully.");
+                    }).catch(err => {
+                        console.error("Error starting background watcher", err);
+                        setLogs("Failed to initialize background tracking.");
+                    });
+                };
+
+                initBackgroundWatcher();
             });
 
         } else if (navigator.geolocation) {
