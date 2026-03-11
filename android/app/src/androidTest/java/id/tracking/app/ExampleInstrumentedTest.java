@@ -1,4 +1,4 @@
-package com.getcapacitor.myapp;
+package id.tracking.app;
 
 import static org.junit.Assert.*;
 
