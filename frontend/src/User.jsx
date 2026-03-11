@@ -23,7 +23,7 @@ const User = () => {
                 setScanResult("QR Code Scanned Successfully!");
                 scanner.clear();
                 const userId = localStorage.getItem('userId') || 'sivaraj_1';
-                navigate(`/track`);
+                navigate(`/track?userId=${userId}`);
             },
             (error) => {
             }
