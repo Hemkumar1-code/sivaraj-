@@ -41,7 +41,8 @@ const Track = () => {
 
     useEffect(() => {
         if (!isTracking) return;
-        const s = io('https://location-2-okrw.onrender.com');
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+        const s = io(API_URL);
         setSocket(s);
 
         let watchId = null;

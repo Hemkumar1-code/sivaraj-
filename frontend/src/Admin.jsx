@@ -20,7 +20,8 @@ const carIcon = L.icon({
     iconSize: [32, 32],
     iconAnchor: [16, 16]
 });
-const socket = io('https://location-2-okrw.onrender.com');
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const socket = io(API_URL);
 
 const Admin = () => {
     const navigate = useNavigate();
@@ -96,7 +97,7 @@ const Admin = () => {
     const handleCreateUser = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch('https://location-2-okrw.onrender.com/api/users', {
+            const res = await fetch(`${API_URL}/api/users`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: newEmail, password: newPassword, role: newRole })

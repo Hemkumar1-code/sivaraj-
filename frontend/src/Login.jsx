@@ -14,7 +14,8 @@ const Login = () => {
       // Dev server runs on 5173, backend on 3000. So we need to put the full URL or proxy.
       // Easiest is to use the full URL of the node server for this demo, assume localhost:3000
       // since backend is running there, but we need to ensure it's accessible.
-      const res = await fetch('https://location-2-okrw.onrender.com/api/login', {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const res = await fetch(`${API_URL}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
