@@ -10,9 +10,11 @@ const BackgroundGeolocation = registerPlugin('BackgroundGeolocation');
 const Track = () => {
     const [searchParams] = useSearchParams();
     const userId = searchParams.get('userId') || 'unknown';
-    const [logs, setLogs] = useState('Waiting for GPS fix...');
+    const [logs, setLogs] = useState('Checking GPS permissions...');
     const [isTracking, setIsTracking] = useState(true);
+    const [permissionError, setPermissionError] = useState(false);
     const [socket, setSocket] = useState(null);
+
     useEffect(() => {
         let wakeLock = null;
         const requestWakeLock = async () => {
@@ -26,7 +28,7 @@ const Track = () => {
             }
         };
 
-        if (isTracking) {
+        if (isTracking && !permissionError) {
             requestWakeLock();
         }
 
@@ -35,7 +37,7 @@ const Track = () => {
                 wakeLock.release().then(() => console.log('Screen Wake Lock released'));
             }
         };
-    }, [isTracking]);
+    }, [isTracking, permissionError]);
 
     useEffect(() => {
         if (!isTracking) return;
@@ -72,8 +74,34 @@ const Track = () => {
         };
 
         if (Capacitor.isNativePlatform()) {
-            import('@capacitor/geolocation').then(({ Geolocation }) => {
+            import('@capacitor/geolocation').then(async ({ Geolocation }) => {
+
+                // First request standard foreground permission
+                try {
+                    const permissions = await Geolocation.checkPermissions();
+                    console.log("Current Permissions Status:", permissions);
+
+                    if (permissions.location !== 'granted') {
+                        const requestStatus = await Geolocation.requestPermissions();
+                        console.log("Requested Foreground Permissions Status:", requestStatus);
+
+                        if (requestStatus.location !== 'granted') {
+                            setLogs("Location permission denied. Please enable it in your phone settings.");
+                            setPermissionError(true);
+                            return;
+                        }
+                    }
+
+                    // On Android 10+, background location might need to be checked separately
+                    // though @capacitor/geolocation doesn't directly support it.
+                    // The background plugin should handle it, but we can log more details.
+                } catch (e) {
+                    console.error("Permission check error", e);
+                }
+
                 const initBackgroundWatcher = () => {
+                    console.log("Starting Background Geolocation Watcher...");
+                    setLogs("Initializing background tracking...");
                     BackgroundGeolocation.addWatcher({
                         backgroundMessage: "Your live location is being shared safely.",
                         backgroundTitle: "Live Tracking Active",
@@ -84,18 +112,22 @@ const Track = () => {
                         if (error) {
                             console.error("Background Geo Error:", error);
                             if (error.code === "NOT_AUTHORIZED") {
-                                setLogs("Background Location Denied.\n\nPlease go to:\nSettings -> Apps -> Your App -> Permissions -> Location\nSelect 'Allow all the time'.");
+                                setLogs("Background Location Denied.\n\nEven if you enabled 'Always Allow', some devices require a specific setting.\n\nPlease check:\nSettings -> Apps -> TrackingApp -> Permissions -> Location\nMake sure 'Use precise location' is ON and 'Allow all the time' is selected.");
+                                setPermissionError(true);
                             } else {
                                 setLogs(`Background Geo Error: ${error.message || error.code}`);
                             }
                             return;
                         }
                         if (location && location.latitude) {
+                            console.log("Location received:", location.latitude, location.longitude);
                             handleLocationUpdate(location.latitude, location.longitude);
+                            setPermissionError(false);
                         }
                     }).then((id) => {
                         bgWatcherId = id;
                         setLogs("Background tracking started successfully.");
+                        console.log("Watcher ID:", id);
                     }).catch(err => {
                         console.error("Error starting background watcher", err);
                         setLogs("Failed to initialize background tracking.");
@@ -107,6 +139,7 @@ const Track = () => {
 
         } else if (navigator.geolocation) {
             // Fallback for Web Browser
+            setLogs("Accessing GPS...");
             watchId = navigator.geolocation.watchPosition(
                 (position) => handleLocationUpdate(position.coords.latitude, position.coords.longitude),
                 (error) => {
@@ -132,6 +165,7 @@ const Track = () => {
 
     const stopTracking = async () => {
         setIsTracking(false);
+        setPermissionError(false);
         if (socket) {
             socket.disconnect();
         }
@@ -141,33 +175,39 @@ const Track = () => {
         setLogs("Location sharing has been stopped.");
     };
 
+    const startTracking = () => {
+        setIsTracking(true);
+        setPermissionError(false);
+        setLogs('Restarting GPS tracking...');
+    };
+
     return (
         <div className="glass-panel" style={{ maxWidth: '400px', textAlign: 'center' }}>
             <h1>{isTracking ? 'Live Tracking Active' : 'Tracking Stopped'}</h1>
             <p>
                 {isTracking
-                    ? 'Your location is being shared with the Admin se  curely.'
+                    ? 'Your location is being shared with the Admin securely.'
                     : 'You are no longer sharing your location.'}
             </p>
 
             <div className="tracker-status">
                 <div
-                    className={`status-indicator ${isTracking && !logs.includes('Error') ? 'active' : ''}`}
+                    className={`status-indicator ${isTracking && !permissionError && !logs.includes('Error') ? 'active' : ''}`}
                     style={{
-                        background: isTracking && !logs.includes('Error')
+                        background: isTracking && !permissionError && !logs.includes('Error')
                             ? 'var(--accent)'
                             : 'var(--danger)'
                     }}
                 ></div>
                 <span
                     style={{
-                        color: isTracking && !logs.includes('Error')
+                        color: isTracking && !permissionError && !logs.includes('Error')
                             ? 'var(--accent)'
                             : 'var(--danger)',
                         fontWeight: 'bold'
                     }}
                 >
-                    {isTracking && !logs.includes('Error') ? 'Transmitting...' : 'Stopped / Error'}
+                    {isTracking && !permissionError && !logs.includes('Error') ? 'Transmitting...' : (permissionError ? 'Permission Denied' : 'Stopped')}
                 </span>
             </div>
 
@@ -175,13 +215,31 @@ const Track = () => {
                 {logs}
             </div>
 
-            {isTracking && (
+            {isTracking ? (
                 <button
                     onClick={stopTracking}
                     className="btn"
                     style={{ background: 'var(--danger)', marginTop: '2rem' }}
                 >
                     Stop Sharing Location
+                </button>
+            ) : (
+                <button
+                    onClick={startTracking}
+                    className="btn"
+                    style={{ background: 'var(--accent)', marginTop: '2rem' }}
+                >
+                    Start Sharing Location
+                </button>
+            )}
+
+            {permissionError && (
+                <button
+                    onClick={startTracking}
+                    className="btn"
+                    style={{ background: 'var(--accent)', marginTop: '1rem' }}
+                >
+                    Retry After Enabling Permissions
                 </button>
             )}
         </div>
