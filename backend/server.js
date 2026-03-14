@@ -197,8 +197,13 @@ app.get('/', (req, res) => {
     res.send('Trackr Backend is Running Perfectly! 🚀');
 });
 const PORT = process.env.PORT || 3000;
+console.log(`Starting server on port ${PORT}...`);
+
 connectDB().then(() => {
-    server.listen(PORT, () => {
-        console.log(`Server listening on port ${PORT}`);
+    server.listen(PORT, '0.0.0.0', () => {
+        console.log(`🚀 Server is successfully running on 0.0.0.0:${PORT}`);
     });
+}).catch(err => {
+    console.error('CRITICAL: Failed to start server due to DB connection error:', err);
 });
+
