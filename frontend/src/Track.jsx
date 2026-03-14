@@ -75,8 +75,6 @@ const Track = () => {
 
         if (Capacitor.isNativePlatform()) {
             import('@capacitor/geolocation').then(async ({ Geolocation }) => {
-
-                // First request standard foreground permission
                 try {
                     const permissions = await Geolocation.checkPermissions();
                     console.log("Current Permissions Status:", permissions);
@@ -91,10 +89,6 @@ const Track = () => {
                             return;
                         }
                     }
-
-                    // On Android 10+, background location might need to be checked separately
-                    // though @capacitor/geolocation doesn't directly support it.
-                    // The background plugin should handle it, but we can log more details.
                 } catch (e) {
                     console.error("Permission check error", e);
                 }
@@ -138,7 +132,6 @@ const Track = () => {
             });
 
         } else if (navigator.geolocation) {
-            // Fallback for Web Browser
             setLogs("Accessing GPS...");
             watchId = navigator.geolocation.watchPosition(
                 (position) => handleLocationUpdate(position.coords.latitude, position.coords.longitude),

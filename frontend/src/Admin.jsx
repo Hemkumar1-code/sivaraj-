@@ -164,8 +164,6 @@ const Admin = () => {
                         )}
                     </div>
                 </div>
-
-                {/* Create User/Admin Panel */}
                 <div style={{
                     width: '300px',
                     background: 'rgba(30, 41, 59, 0.5)',
@@ -212,7 +210,7 @@ const Admin = () => {
 
                 <div className="map-container" style={{ flex: 1 }}>
                     <MapContainer
-                        center={[13.0827, 80.2707]} // Default to Chennai
+                        center={[13.0827, 80.2707]} 
                         zoom={12}
                         scrollWheelZoom={true}
                         ref={mapRef}
