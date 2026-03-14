@@ -50,13 +50,19 @@ const Track = () => {
 
         const handleLocationUpdate = async (latitude, longitude) => {
             const timestamp = new Date().toISOString();
+            console.log(`Update for ${userId}: ${latitude}, ${longitude}`);
 
-            s.emit('update_location', {
-                userId: userId,
-                lat: latitude,
-                lng: longitude,
-                timestamp: timestamp
-            });
+            if (s.connected) {
+                s.emit('update_location', {
+                    userId: userId,
+                    lat: latitude,
+                    lng: longitude,
+                    timestamp: timestamp
+                });
+            } else {
+                console.warn("Socket not connected, location skipped for socket emit");
+            }
+
             if (userId !== 'unknown') {
                 try {
                     await setDoc(doc(db, "active_users", userId), {
@@ -67,11 +73,13 @@ const Track = () => {
                     }, { merge: true });
                 } catch (error) {
                     console.error("Firebase update error", error);
+                    setLogs(prev => prev + "\nFirebase Error: " + error.message);
                 }
             }
 
-            setLogs(`Lat: ${latitude.toFixed(5)} \nLng: ${longitude.toFixed(5)} \nUpdated: ${new Date().toLocaleTimeString()}`);
+            setLogs(`User ID: ${userId}\nLat: ${latitude.toFixed(5)} \nLng: ${longitude.toFixed(5)} \nUpdated: ${new Date().toLocaleTimeString()}\nSocket: ${s.connected ? 'Connected ✅' : 'Disconnected ❌'}`);
         };
+
 
         if (Capacitor.isNativePlatform()) {
             import('@capacitor/geolocation').then(async ({ Geolocation }) => {

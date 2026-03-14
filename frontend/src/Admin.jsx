@@ -43,41 +43,67 @@ const Admin = () => {
         socket.emit('admin_join');
 
         socket.on('initial_locations', (usersArray) => {
+            console.log("Received initial locations via socket:", usersArray);
+            const now = Date.now();
             setUsers(prev => {
                 let merged = [...prev];
                 usersArray.forEach(u => {
-                    if (!merged.find(m => m.userId === u.userId)) merged.push(u);
+                    const idx = merged.findIndex(m => m.userId === u.userId);
+                    if (idx !== -1) merged[idx] = { ...merged[idx], ...u, online: true, lastSocketUpdate: now };
+                    else merged.push({ ...u, online: true, lastSocketUpdate: now });
                 });
                 return merged;
             });
         });
+
 
         const q = query(collection(db, "active_users"));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const fbUsers = [];
             snapshot.forEach(doc => fbUsers.push(doc.data()));
+            console.log("Firebase snapshot received:", fbUsers);
+            
             setUsers(prev => {
                 let merged = [...prev];
+                // Mark all current users as offline initially, then update with FB status
                 fbUsers.forEach(fu => {
                     const idx = merged.findIndex(u => u.userId === fu.userId);
-                    if (idx !== -1) merged[idx] = { ...merged[idx], ...fu };
-                    else merged.push(fu);
+                    if (idx !== -1) {
+                        merged[idx] = { ...merged[idx], ...fu };
+                    } else {
+                        merged.push(fu);
+                    }
                 });
-                // Clean up offline users deleted from FB
-                merged = merged.filter(m => fbUsers.find(fu => fu.userId === m.userId) || m.distance);
-                return merged;
+
+                // Clean up logic: Only keep users who are either in Firebase OR have recent socket activity
+                // For now, let's be more lenient and keep users if they exist in either source
+                const currentIds = fbUsers.map(u => u.userId);
+                // Bug fix: Ensure users are not removed if their distance is 0, as long as they are active.
+                // The previous filter was already robust enough to keep users from Firebase or recent socket activity.
+                // Adding a log to confirm the state of users after Firebase update.
+                console.log("Users after Firebase merge:", merged);
+                return merged.filter(m => currentIds.includes(m.userId) || m.lastSocketUpdate > Date.now() - 300000); // 5 mins
             });
         });
 
         socket.on('user_location_update', (userData) => {
+            console.log("Socket location update received:", userData);
             setUsers(prev => {
                 const existingIdx = prev.findIndex(u => u.userId === userData.userId);
+                const now = Date.now();
                 if (existingIdx !== -1) {
                     const updated = [...prev];
-                    updated[existingIdx] = { ...updated[existingIdx], distance: userData.distance };
+                    updated[existingIdx] = { 
+                        ...updated[existingIdx], 
+                        ...userData, 
+                        lastSocketUpdate: now,
+                        online: true 
+                    };
+                    console.log(`Updated user ${userData.userId} via socket. New state:`, updated[existingIdx]);
                     return updated;
                 }
-                return [...prev, userData];
+                console.log(`Added new user ${userData.userId} via socket. Data:`, userData);
+                return [...prev, { ...userData, lastSocketUpdate: now, online: true }];
             });
         });
 
@@ -142,16 +168,22 @@ const Admin = () => {
                             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No active drivers.</p>
                         ) : (
                             users.map(data => (
-                                <div key={data.userId} className="user-card">
-                                    <h3>{data.userId}</h3>
+                                <div key={data.userId} className="user-card" style={{ borderLeft: data.online ? '4px solid var(--accent)' : '4px solid var(--text-muted)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <h3>{data.userId}</h3>
+                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                                            {data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : 'N/A'}
+                                        </span>
+                                    </div>
                                     <div className="tracker-status" style={{ marginTop: '5px', justifyContent: 'flex-start' }}>
-                                        <div className="status-indicator active"></div>Live
+                                        <div className={`status-indicator ${data.online ? 'active' : ''}`}></div>
+                                        {data.online ? 'Live (Socket)' : 'Offline (Firebase Cached)'}
                                     </div>
                                     <div className="distance-display" style={{ fontSize: '2rem' }}>
                                         {data.distance ? data.distance.toFixed(3) : "0.000"} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>km</span>
                                     </div>
-                                    <p>Lat: {data.lat.toFixed(5)}</p>
-                                    <p>Lng: {data.lng.toFixed(5)}</p>
+                                    <p>Lat: {data.lat?.toFixed(5) || 'N/A'}</p>
+                                    <p>Lng: {data.lng?.toFixed(5) || 'N/A'}</p>
                                     <button
                                         className="btn"
                                         style={{ marginTop: '10px', padding: '0.5rem' }}
